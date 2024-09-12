@@ -3,8 +3,8 @@ from flask_jwt_extended import jwt_required
 import pandas as pd
 import os
 import uuid
-from api.tasks import process_csv_data
-from api.config import Config
+from tasks import process_csv_data
+from config import Config
 
 TEMP_DIR = Config.TEMP_DIR
 

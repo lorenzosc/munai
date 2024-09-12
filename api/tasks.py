@@ -9,16 +9,15 @@ from fhirclient.models.fhirdate import FHIRDate
 from fhirclient.models.contactpoint import ContactPoint
 import os
 
-from dotenv import load_dotenv
-load_dotenv()
+from config import Config
 
-app_name = os.getenv('APP_NAME', 'PatientDataAPI')
+app_name = Config.APP_NAME
 
-celery = Celery('tasks', broker=os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
+celery = Celery('tasks', broker=Config.CELERY_BROKER_URL, backend=Config.CELERY_RESULT_BACKEND)
 
 settings = {
     'app_id': app_name,
-    'api_base': os.getenv('FHIR_SERVER_URL', 'http://localhost:8080/baseR4')
+    'api_base': Config.FHIR_SERVER_URL
 }
 
 @celery.task

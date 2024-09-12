@@ -3,8 +3,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 import os
 
-from api.config import Config
-from api.routes import init_app
+from config import Config
+from routes import init_app
 
 
 app = Flask(__name__)
