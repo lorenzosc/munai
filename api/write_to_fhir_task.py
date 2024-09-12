@@ -4,16 +4,18 @@ from fhirclient import client
 from fhirclient.models.patient import Patient
 from fhirclient.models.humanname import HumanName
 from fhirclient.models.identifier import Identifier
+from fhirclient.models.address import Address
 from fhirclient.models.observation import Observation
 from fhirclient.models.fhirdate import FHIRDate
 from fhirclient.models.contactpoint import ContactPoint
 import os
 
-from config import Config
+from api.config import Config
+from api.models import db, PatientData
 
 app_name = Config.APP_NAME
 
-celery = Celery('tasks', broker=Config.CELERY_BROKER_URL, backend=Config.CELERY_RESULT_BACKEND)
+celery = Celery('write_to_fhir_task', broker=Config.CELERY_BROKER_URL, backend=Config.CELERY_RESULT_BACKEND)
 
 settings = {
     'app_id': app_name,
@@ -41,7 +43,7 @@ def process_patient_data(row):
     
     # TODO: correct the CPF system URL
     patient.identifier = [Identifier({
-        'system': 'http://example.org/fhir/sid/cpf',
+        'system': 'https://servicos.receita.fazenda.gov.br/Servicos/CPF/ConsultaSituacao/ConsultaPublica.asp',
         'value': row['CPF']
     })]
     
@@ -56,8 +58,11 @@ def process_patient_data(row):
     
     patient.telecom = [ContactPoint({
         'system': 'phone',
-        'value': row['Telefone'],
-        'use': 'home'
+        'value': row['Telefone']
+    })]
+
+    patient.address = [Address({
+        "country": row['País de Nascimento'],
     })]
     
     patient.create(smart.server)
