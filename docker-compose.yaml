@@ -13,7 +13,6 @@ services:
   flask-app:
     build: .
     container_name: flask-app
-    command: if [ "$FLASK_ENV" = "development" ]; then flask run --host=0.0.0.0 --port=5000; else gunicorn -w 4 -b 0.0.0.0:5000 api.app:app; fi
     working_dir: /app
     volumes:
       - .:/app
@@ -22,6 +21,7 @@ services:
     depends_on:
       - redis
       - fhir-server
+    entrypoint: ["/app/entrypoint.sh"]
 
   celery-worker:
     build: .
@@ -32,3 +32,4 @@ services:
       - redis
     volumes:
       - .:/app
+    user: celeryuser
