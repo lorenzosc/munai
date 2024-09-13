@@ -15,5 +15,5 @@ def login():
     if not user:
         return jsonify({"msg": "Invalid username or password"}), 401
     
-    access_token = create_access_token(identity=user.username, timedelta=timedelta(days=1))
+    access_token = create_access_token(identity=user.username, expires_delta=timedelta(days=1))
     return jsonify(access_token=access_token), 200
