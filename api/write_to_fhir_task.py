@@ -6,14 +6,18 @@ from fhirclient.models.humanname import HumanName
 from fhirclient.models.identifier import Identifier
 from fhirclient.models.address import Address
 from fhirclient.models.observation import Observation
+from fhirclient.models.condition import Condition
 from fhirclient.models.fhirdate import FHIRDate
 from fhirclient.models.contactpoint import ContactPoint
+from snomed_ct import SnomedCtExample
 import os
 
 from api.config import Config
 from api.models import db, PatientData
 
 app_name = Config.APP_NAME
+
+snomed = SnomedCtExample()
 
 celery = Celery('write_to_fhir_task', broker=Config.CELERY_BROKER_URL, backend=Config.CELERY_RESULT_BACKEND)
 
@@ -23,63 +27,82 @@ settings = {
 }
 
 @celery.task
-def process_csv_data(file_path: str):
-    df = pd.read_csv(file_path)
+def process_db_data(file_path: str):
+    patients = PatientData.query.filter_by(file_id=file_path).all()
     
-    for index, row in df.iterrows():
-        process_patient_data(row)
+    for patient in patients:
+        process_patient_data(patient)
 
-    os.remove(file_path)
+    for patient in patients:
+        db.session.delete(patient)
+    
+    db.session.commit()
+
 
 def process_patient_data(row):
     smart = client.FHIRClient(settings=settings)
     
     patient = Patient()
     
+    names = row.nome.split()
     patient.name = [HumanName({
-        'family': row['Nome'].split()[-1],
-        'given': row['Nome'].split()[:-1]
+        'family': names[-1],
+        'given': names[:-1]
     })]
     
-    # TODO: correct the CPF system URL
     patient.identifier = [Identifier({
         'system': 'https://servicos.receita.fazenda.gov.br/Servicos/CPF/ConsultaSituacao/ConsultaPublica.asp',
-        'value': row['CPF']
+        'value': row.cpf
     })]
     
-    # TODO verify if 'male' and 'female' is better than 1 and 0
     gender_map = {
         'Masculino': 'male',
         'Feminino': 'female'
     }
-    patient.gender = gender_map.get(row['Gênero'].strip(), 'unknown')
+    patient.gender = gender_map.get(row.genero.strip(), 'unknown')
     
-    patient.birthDate = FHIRDate(row['Data de Nascimento'])
+    patient.birthDate = FHIRDate(row.data_nascimento)
     
     patient.telecom = [ContactPoint({
         'system': 'phone',
-        'value': row['Telefone']
+        'value': row.telefone
     })]
 
     patient.address = [Address({
-        "country": row['País de Nascimento'],
+        "country": row.pais_nascimento,
     })]
     
     patient.create(smart.server)
     
-    observations = row['Observação'].split('|')
-    for obs in observations:
-        if obs.strip():
-            observation = Observation()
-            observation.subject = patient
-            observation.code = {
-                'coding': [{
-                    'system': 'http://snomed.info/sct',
-                    'code': 'TODO',  # TODO map the observation code
-                    'display': obs.strip()
-                }],
-                'text': obs.strip()
-            }
-            observation.status = 'final'
-            observation.effectiveDateTime = FHIRDate.today()
-            observation.create(smart.server)
+    observations = row.observacao.split('|')
+    for observation in observations:
+        obs = observation.strip()
+        if obs:
+            if snomed.check_observation(obs):
+                observation = Observation()
+                observation.subject = patient
+                observation.code = {
+                    'coding': [{
+                        'system': 'http://snomed.info/sct',
+                        'code': snomed.get_code_from_name(obs),
+                        'display': obs
+                    }],
+                    'text': obs
+                }
+                observation.status = 'final'
+                observation.effectiveDateTime = FHIRDate.today()
+                observation.create(smart.server)
+
+            else:
+                condition = Condition()
+                condition.subject = patient
+                condition.code = {
+                    'coding': [{
+                        'system': 'http://snomed.info/sct',
+                        'code': snomed.get_code_from_name(obs),
+                        'display': obs
+                    }],
+                    'text': obs
+                }
+                condition.onsetDateTime = FHIRDate.today()
+                condition.create(smart.server)
