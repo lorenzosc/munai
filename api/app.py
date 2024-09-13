@@ -1,21 +1,17 @@
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
-import os
 
-from config import Config
-from routes import init_app
+from api.config import Config
+from api.routes import init_app
+
+from api.models import db
 
 
 app = Flask(__name__)
 app.name = Config.APP_NAME
 app.config.from_object(Config)
 
-db = SQLAlchemy(app)
 jwt = JWTManager(app)
-
-TEMP_DIR = Config.TEMP_DIR
-os.makedirs(TEMP_DIR, exist_ok=True)
 
 with app.app_context():
     db.create_all()
