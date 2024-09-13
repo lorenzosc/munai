@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 import pandas as pd
 import os
+from datetime import datetime
 import uuid
 from api.write_to_fhir_task import process_db_data
 from api.models import db, PatientData
@@ -25,12 +26,16 @@ def upload_patients_csv():
 
     try:
         for _, row in df.iterrows():
+
+            birth_date_str = row['Data de Nascimento']
+            birth_date = datetime.strptime(birth_date_str, '%d/%m/%Y').date()
+
             patient = PatientData(
                 file_id=file_id,
                 nome=row['Nome'],
                 cpf=row['CPF'],
                 genero=row['Gênero'],
-                data_nascimento=row['Data de Nascimento'],
+                data_nascimento=birth_date,
                 telefone=row['Telefone'],
                 pais_nascimento=row['País de Nascimento'],
                 observacao=row['Observação']
@@ -52,4 +57,4 @@ def upload_patients_csv():
         return jsonify({"error": "Failed to parse CSV file"}), 400
     
     except Exception as e:
-        return jsonify({"error": f"Unexpected error"}), 500
+        return jsonify({"error": f"{e}"}), 500
