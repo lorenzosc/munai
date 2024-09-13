@@ -4,13 +4,13 @@ This project aims to stablish a FHIR server, an api for patient information uplo
 
 ## Prerequisites
 
-You need both docker and docker compose installed to run this application. Python and all the libraries in requirements.txt are also recommended if you intend to use the scripts in /usage to showcase the services.
+You need both docker and docker compose installed to run this application. Python and all the libraries in requirements.txt are also recommended if you intend to use the scripts in [usage](usage) to showcase the services.
 
 ## Environment Variables
 
-The .env file contains all the environment variables for the FHIR server, the flask application and the celery. It also has the JWT-SECRET-KEY to showcase everything in the project, but in a production environment, this would probably be managed using a secrets manager.
+The [.env](.env) file contains all the environment variables for the FHIR server, the flask application and the celery. It also has the JWT-SECRET-KEY to showcase everything in the project, but in a production environment, this would probably be managed using a secrets manager.
 
-The .env.test contains the variables for a testing environment, which is loaded in config_test.py. The biggest difference here is the usage of different sqlite database file. Also, for a more robust solution in production, it would be advised to use another DB, such as PostgreSQL, which would require other environment variables as well for connection.
+The [.env.test](.env.test) contains the variables for a testing environment, which is loaded in [config_test.py](api/config_test.py). The biggest difference here is the usage of different sqlite database file. Also, for a more robust solution in production, it would be advised to use another DB, such as PostgreSQL, which would require other environment variables as well for connection.
 
 ## Dockerfile
 
@@ -30,9 +30,11 @@ The entrypoint for the flask application defines the shell file that will be run
 
 The flask application calls the celery tasks using their .delay() method. But the celery task has to access the database in order to get the data and register each resource in the FHIR. That would lead to a circular import. The solution used here is that celery iniates another flask application, in which the routes aren't registered, just to manage it's connection with the database, allowing to read the patients which will be written, and deleting them from the database afterwards.
 
+The Redis server is implemented with the sole purpose of being a message broker for the Celery tasks.
+
 ## SNOMED-CT
 
-Given the sample file provided, the conditions and observations found were mapped to their respective SNOMED-CT code for registering in the FHIR server. For a more robust, production environment, it would be better to translate the terms and use the [snomed international API](http://localhost:8080/hapi-fhir-jpaserve) for a more broad registering of observations. The current solution is even implemented using an interface, intended to making the extensability with the API integration easier.
+Given the sample file provided, the conditions and observations found were mapped to their respective SNOMED-CT code for registering in the FHIR server. For a more robust, production environment, it would be better to translate the terms and use the [snomed international API](https://browser.ihtsdotools.org/?) for a more broad registering of observations. The current solution is even implemented using an interface, intended to making the extensability with the API integration easier.
 
 ## API Endpoints
 
