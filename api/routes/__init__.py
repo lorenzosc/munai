@@ -1,5 +1,5 @@
 from flask import Blueprint
-from api.routes.patient_routes import patient_bp
+from api.routes.patient import patient_bp
 from api.routes.login import login_bp
 
 def init_app(app):
