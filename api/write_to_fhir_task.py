@@ -1,6 +1,8 @@
 from api.celery_app import celery
 import logging
 
+from datetime import datetime, timezone
+
 from fhirclient import client
 from fhirclient.models.patient import Patient
 from fhirclient.models.humanname import HumanName
@@ -9,7 +11,11 @@ from fhirclient.models.address import Address
 from fhirclient.models.observation import Observation
 from fhirclient.models.condition import Condition
 from fhirclient.models.fhirdate import FHIRDate
+from fhirclient.models.fhirdatetime import FHIRDateTime
 from fhirclient.models.contactpoint import ContactPoint
+from fhirclient.models.fhirreference import FHIRReference
+from fhirclient.models.codeableconcept import CodeableConcept
+from fhirclient.models.coding import Coding
 
 from api.snomed_ct import SnomedCtExample
 snomed = SnomedCtExample()
@@ -78,7 +84,7 @@ def process_patient_data(row):
         "country": row.pais_nascimento,
     })]
     
-    patient.create(smart.server)
+    patient = patient.create(smart.server)
     logger.info(f'Created FHIR patient resource for {row.nome}')
     
     if row.observacao:
@@ -87,32 +93,32 @@ def process_patient_data(row):
             obs = observation.strip()
             if obs:
                 if snomed.check_observation(obs):
+                    
                     observation = Observation()
-                    observation.subject = patient
-                    observation.code = {
-                        'coding': [{
+                    observation.code = CodeableConcept()
+                    observation.code.coding = [Coding({
                             'system': 'http://snomed.info/sct',
                             'code': snomed.get_code_from_name(obs),
                             'display': obs
-                        }],
-                        'text': obs
-                    }
+                        })]
+                    observation.code.text = obs
                     observation.status = 'final'
-                    observation.effectiveDateTime = FHIRDate.today()
+                    observation.effectiveDateTime = FHIRDateTime(datetime.now(timezone.utc).replace(microsecond=0).isoformat())
+                    observation.subject = FHIRReference({'reference': f'Patient/{patient["id"]}'})
+
                     observation.create(smart.server)
                     logger.info(f'Created FHIR observation resource {obs} for {row.nome}')
 
                 else:
                     condition = Condition()
-                    condition.subject = patient
-                    condition.code = {
-                        'coding': [{
-                            'system': 'http://snomed.info/sct',
-                            'code': snomed.get_code_from_name(obs),
-                            'display': obs
-                        }],
-                        'text': obs
-                    }
-                    condition.onsetDateTime = FHIRDate.today()
+                    condition.subject = FHIRReference({'reference': f'Patient/{patient["id"]}'})
+                    condition.code = CodeableConcept()
+                    condition.code.coding = [Coding({
+                        'system': 'http://snomed.info/sct',
+                        'code': snomed.get_code_from_name(obs),
+                        'display': obs
+                    })]
+                    condition.code.text = obs
+                    condition.onsetDateTime = FHIRDateTime(datetime.now(timezone.utc).replace(microsecond=0).isoformat())
                     condition.create(smart.server)
                     logger.info(f'Created FHIR condition resource {obs} for {row.nome}')
