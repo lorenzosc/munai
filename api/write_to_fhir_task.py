@@ -1,5 +1,6 @@
 from celery import Celery
-import pandas as pd
+import logging
+
 from fhirclient import client
 from fhirclient.models.patient import Patient
 from fhirclient.models.humanname import HumanName
@@ -9,18 +10,19 @@ from fhirclient.models.observation import Observation
 from fhirclient.models.condition import Condition
 from fhirclient.models.fhirdate import FHIRDate
 from fhirclient.models.contactpoint import ContactPoint
+
 from snomed_ct import SnomedCtExample
-import os
+snomed = SnomedCtExample()
 
 from api.config import Config
 from api.models import db, PatientData
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+
 app_name = Config.APP_NAME
-
-snomed = SnomedCtExample()
-
 celery = Celery('write_to_fhir_task', broker=Config.CELERY_BROKER_URL, backend=Config.CELERY_RESULT_BACKEND)
-
 settings = {
     'app_id': app_name,
     'api_base': Config.FHIR_SERVER_URL
@@ -28,15 +30,20 @@ settings = {
 
 @celery.task
 def process_db_data(file_path: str):
+    logger.info(f'Starting to process data for file: {file_path}')
     patients = PatientData.query.filter_by(file_id=file_path).all()
     
     for patient in patients:
-        process_patient_data(patient)
-
-    for patient in patients:
-        db.session.delete(patient)
+        try:
+            process_patient_data(patient)
+            logger.info(f'Successfully processed patient: {patient.nome}')
+            db.session.delete(patient)
+        except Exception as e:
+            logger.error(f'Error processing patient {patient.nome}: {e}')
     
     db.session.commit()
+
+    logger.info(f'Finished processing data for file: {file_path}')
 
 
 def process_patient_data(row):
@@ -73,6 +80,7 @@ def process_patient_data(row):
     })]
     
     patient.create(smart.server)
+    logger.info(f'Created FHIR patient resource for {row.nome}')
     
     observations = row.observacao.split('|')
     for observation in observations:
@@ -92,6 +100,7 @@ def process_patient_data(row):
                 observation.status = 'final'
                 observation.effectiveDateTime = FHIRDate.today()
                 observation.create(smart.server)
+                logger.info(f'Created FHIR observation resource {obs} for {row.nome}')
 
             else:
                 condition = Condition()
@@ -106,3 +115,4 @@ def process_patient_data(row):
                 }
                 condition.onsetDateTime = FHIRDate.today()
                 condition.create(smart.server)
+                logger.info(f'Created FHIR condition resource {obs} for {row.nome}')
