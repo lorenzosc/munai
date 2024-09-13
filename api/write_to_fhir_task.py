@@ -1,4 +1,4 @@
-from celery import Celery
+from api.celery_app import celery
 import logging
 
 from fhirclient import client
@@ -20,10 +20,7 @@ from api.models import db, PatientData
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-
 app_name = Config.APP_NAME
-celery = Celery('write_to_fhir_task', broker=Config.broker_url, backend=Config.result_backend)
-celery.config_from_object(Config)
 
 settings = {
     'app_id': app_name,
@@ -70,7 +67,7 @@ def process_patient_data(row):
     }
     patient.gender = gender_map.get(row.genero.strip(), 'unknown')
     
-    patient.birthDate = FHIRDate(row.data_nascimento)
+    patient.birthDate = FHIRDate(row.data_nascimento.strftime('%Y-%m-%d'))
     
     patient.telecom = [ContactPoint({
         'system': 'phone',
