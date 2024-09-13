@@ -1,4 +1,4 @@
-# OVERVIEW
+## OVERVIEW
 
 This project aims to stablish a FHIR server, an api for patient information upload, and an assynchronous service to process the data and send to the FHIR server. The FHIR server used is HAPI FHIR, the API is a flask application, and the assynchronous processing is managed through Redis as a message broker and Celery.
 
