@@ -5,6 +5,7 @@ db = SQLAlchemy()
 
 class PatientData(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    file_id = db.Column(db.String(36), nullable=False)
     nome = db.Column(db.String(120), nullable=False)
     cpf = db.Column(db.String(14), nullable=False)
     genero = db.Column(db.String(10), nullable=False)

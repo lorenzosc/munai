@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_jwt_extended import JWTManager
+from flask_migrate import Migrate
 
 from api.config import Config
 from api.routes import init_app
@@ -12,6 +13,7 @@ app.name = Config.APP_NAME
 app.config.from_object(Config)
 
 jwt = JWTManager(app)
+migrate = Migrate(app, db)
 
 init_app(app)
 

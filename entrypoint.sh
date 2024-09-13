@@ -1,5 +1,7 @@
 #!/bin/sh
 
+flask db upgrade
+
 if [ "$FLASK_ENV" = "development" ]; then
     echo "Running in development mode"
     exec flask run --host=0.0.0.0 --port=5000
