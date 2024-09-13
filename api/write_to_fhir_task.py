@@ -24,7 +24,7 @@ app_name = Config.APP_NAME
 
 settings = {
     'app_id': app_name,
-    'api_base': Config.FHIR_SERVER_URL
+    'api_base': 'http://fhir-server:8080/fhir'
 }
 
 @celery.task
@@ -81,37 +81,38 @@ def process_patient_data(row):
     patient.create(smart.server)
     logger.info(f'Created FHIR patient resource for {row.nome}')
     
-    observations = row.observacao.split('|')
-    for observation in observations:
-        obs = observation.strip()
-        if obs:
-            if snomed.check_observation(obs):
-                observation = Observation()
-                observation.subject = patient
-                observation.code = {
-                    'coding': [{
-                        'system': 'http://snomed.info/sct',
-                        'code': snomed.get_code_from_name(obs),
-                        'display': obs
-                    }],
-                    'text': obs
-                }
-                observation.status = 'final'
-                observation.effectiveDateTime = FHIRDate.today()
-                observation.create(smart.server)
-                logger.info(f'Created FHIR observation resource {obs} for {row.nome}')
+    if row.observacao:
+        observations = row.observacao.split('|')
+        for observation in observations:
+            obs = observation.strip()
+            if obs:
+                if snomed.check_observation(obs):
+                    observation = Observation()
+                    observation.subject = patient
+                    observation.code = {
+                        'coding': [{
+                            'system': 'http://snomed.info/sct',
+                            'code': snomed.get_code_from_name(obs),
+                            'display': obs
+                        }],
+                        'text': obs
+                    }
+                    observation.status = 'final'
+                    observation.effectiveDateTime = FHIRDate.today()
+                    observation.create(smart.server)
+                    logger.info(f'Created FHIR observation resource {obs} for {row.nome}')
 
-            else:
-                condition = Condition()
-                condition.subject = patient
-                condition.code = {
-                    'coding': [{
-                        'system': 'http://snomed.info/sct',
-                        'code': snomed.get_code_from_name(obs),
-                        'display': obs
-                    }],
-                    'text': obs
-                }
-                condition.onsetDateTime = FHIRDate.today()
-                condition.create(smart.server)
-                logger.info(f'Created FHIR condition resource {obs} for {row.nome}')
+                else:
+                    condition = Condition()
+                    condition.subject = patient
+                    condition.code = {
+                        'coding': [{
+                            'system': 'http://snomed.info/sct',
+                            'code': snomed.get_code_from_name(obs),
+                            'display': obs
+                        }],
+                        'text': obs
+                    }
+                    condition.onsetDateTime = FHIRDate.today()
+                    condition.create(smart.server)
+                    logger.info(f'Created FHIR condition resource {obs} for {row.nome}')
