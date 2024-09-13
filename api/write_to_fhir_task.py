@@ -11,7 +11,7 @@ from fhirclient.models.condition import Condition
 from fhirclient.models.fhirdate import FHIRDate
 from fhirclient.models.contactpoint import ContactPoint
 
-from snomed_ct import SnomedCtExample
+from api.snomed_ct import SnomedCtExample
 snomed = SnomedCtExample()
 
 from api.config import Config
@@ -23,6 +23,8 @@ logger.setLevel(logging.INFO)
 
 app_name = Config.APP_NAME
 celery = Celery('write_to_fhir_task', broker=Config.CELERY_BROKER_URL, backend=Config.CELERY_RESULT_BACKEND)
+celery.config_from_object(Config)
+
 settings = {
     'app_id': app_name,
     'api_base': Config.FHIR_SERVER_URL
