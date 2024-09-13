@@ -22,7 +22,7 @@ logger.setLevel(logging.INFO)
 
 
 app_name = Config.APP_NAME
-celery = Celery('write_to_fhir_task', broker=Config.CELERY_BROKER_URL, backend=Config.CELERY_RESULT_BACKEND)
+celery = Celery('write_to_fhir_task', broker=Config.broker_url, backend=Config.result_backend)
 celery.config_from_object(Config)
 
 settings = {
